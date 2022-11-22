@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.Attributes;
+﻿
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
@@ -20,90 +21,89 @@ using System.Windows.Controls;
 
 namespace Task_6._1
 {
-    [Transaction(TransactionMode.Manual)]
-    public class Main : IExternalCommand
+     {
+        [Transaction(TransactionMode.Manual)]
+    internal class CmdExportImage : IExternalCommand
     {
-        public Result Execute (ExternalCommandData commandData, ref string message, ElementSet elements)
+        public Result Execute(
+            ExternalCommandData commandData,
+            ref string message,
+            ElementSet elements)
         {
-            Documet doc = commandData.Application.ActiveUIDocument.Document;
-            using (var ts = new Transaction(doc, "export jpg"))
-            {
-                ts.Start();
+            var uiapp = commandData.Application;
+            var doc = uiapp.ActiveUIDocument.Document;
+            var use_old_code = false;
 
-                ViewPlan viewPlan = new FilteredElementCollector(doc)
-                    .OfClass(typeof(ViewPlan))
-                    .Cast<viewPlan>()
-                    FirstOrDefault(viewPlan => v.ViewType.FloorPlan &&
-                    v.Name.Equals("Level 1"));
-                var ifsOption = new IFSExportOptions();
-                doc.Export(Enviroment.GetFolderPath(Environment.SpecialFolder.Desktop), "export.jpg",
-                    new List<ElementId> { viewPlan.Id}, ifsOption;
-                ts.Commit();
-            }
-            return Result.Succeeded;
+            var r = use_old_code
+                ? ExportToImage2(doc)
+                : ExportToImage3(doc);
+
+            return r;
         }
-        public void BatchPrint(DocumentPage doc)
-        {
-            var sheets = new FilteredElementCollector(doc)
-                .WhereElementIsNotElementType()
-                .OfClass(typeof(ViewSheet))
-                .Cast<ViewSheet>()
-                .ToList();
-            var groupedSheets = sheets.GroupBy(sheets => doc.GetElement(new FilteredElementCollector(doc, sheets.Id)
-                .OfCategory(BuiltInCategory.OST_TitleBlocks)
-                .FirstElementId()).Name);
-            var viewSets = new List<ViewSet>();
-            PrintManager printManager = doc.PrintManager;
-            printManager.SelectNewPrintDriver("PDFCeator");
-            ViewSheetSetting = printManager.ViewSheetSetting;
-            foreach (var groupedSheet in groupedSheets)
-            {
-                if (groupedSheet.Key == null)
-                    continue;
-                var view Set = new ViewSet();
-                var sheetsOfGroup = groupedSheet.Select(sbyte => s).ToList();
-                foreach (var sheet in sheetsOfGroup)
-                {
-                    viewSet.Insert(sheet);
-                }
-                viewSets.Add(viewSet);
-           
-                printManager.PrintRange = PrintRange.Select;
-                viewSheetSetting.CurrentViewSheetSet.Views = viewSet;
+    }
+    /* public void BatchPrint(DocumentPage doc)
+     {
+         var sheets = new FilteredElementCollector(doc)
+             .WhereElementIsNotElementType()
+             .OfClass(typeof(ViewSheet))
+             .Cast<ViewSheet>()
+             .ToList();
+         var groupedSheets = sheets.GroupBy(sheets => doc.GetElement(new FilteredElementCollector(doc, sheets.Id)
+             .OfCategory(BuiltInCategory.OST_TitleBlocks)
+             .FirstElementId()).Name);
+         var viewSets = new List<ViewSet>();
+         PrintManager printManager = doc.PrintManager;
+         printManager.SelectNewPrintDriver("PDFCeator");
+         ViewSheetSetting = printManager.ViewSheetSetting;
+         foreach (var groupedSheet in groupedSheets)
+         {
+             if (groupedSheet.Key == null)
+                 continue;
+             var view Set = new ViewSet();
+             var sheetsOfGroup = groupedSheet.Select(sbyte => s).ToList();
+             foreach (var sheet in sheetsOfGroup)
+             {
+                 viewSet.Insert(sheet);
+             }
+             viewSets.Add(viewSet);
 
-                using (var ts = new Transaction(doc, "Create view set"))
-                {
-                     ts.Start();
-                     viewSheetSetting.SaveAs($"{groupedSheet.Key}_{Guid.NewGuid()}");
-                     ts.Commit();
-                }
+             printManager.PrintRange = PrintRange.Select;
+             viewSheetSetting.CurrentViewSheetSet.Views = viewSet;
 
-                bool isFormatSelected = false;
-                foreach (PaperSize paperSize in printManager.PaperSizes)
-                {
-                    if(string.Equals(groupedSheet.Key, "A4K") &&
-                      string.Equals(paperSise.Name, "A4"))
-                    {
-                        printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PaperSize = paperSize;
-                        printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation = PageOrientationType.Portrait;
-                        isFormatSelected = true;
-                    }
-                    else if(string.Equals(groupedSheet.Key, "A3A") &&
-                      string.Equals(paperSise.Name, "A3 "))
-                    {
-                        printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PaperSize = paperSize;
-                        printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation = PageOrientationType.Landscape;
-                        isFormatSelected = true;
-                    }
-                }
-                if(!isPormatSelected)
-                {
-                     TaskDialog.Show("Ошибка", "Не найден формат")
-                     return Result.Failed;
-                }
-                printManager.CombinedFile = false;
-                printManager.SubmitPrint();
-            }
+             using (var ts = new Transaction(doc, "Create view set"))
+             {
+                  ts.Start();
+                  viewSheetSetting.SaveAs($"{groupedSheet.Key}_{Guid.NewGuid()}");
+                  ts.Commit();
+             }
+
+             bool isFormatSelected = false;
+             foreach (PaperSize paperSize in printManager.PaperSizes)
+             {
+                 if(string.Equals(groupedSheet.Key, "A4K") &&
+                   string.Equals(paperSise.Name, "A4"))
+                 {
+                     printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PaperSize = paperSize;
+                     printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation = PageOrientationType.Portrait;
+                     isFormatSelected = true;
+                 }
+                 else if(string.Equals(groupedSheet.Key, "A3A") &&
+                   string.Equals(paperSise.Name, "A3 "))
+                 {
+                     printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PaperSize = paperSize;
+                     printManager.PrintSetup.CurrentPrintSetting.PrintParameters.PageOrientation = PageOrientationType.Landscape;
+                     isFormatSelected = true;
+                 }
+             }
+             if(!isPormatSelected)
+             {
+                  TaskDialog.Show("Ошибка", "Не найден формат")
+                  return Result.Failed;
+             }
+             printManager.CombinedFile = false;
+             printManager.SubmitPrint();*/
+}
         }
     }
 }
+
